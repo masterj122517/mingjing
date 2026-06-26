@@ -54,6 +54,22 @@
             <span>已完成</span>
             <span class="nav-count" id="count-completed">0</span>
           </a>
+          <div class="sidebar-divider"></div>
+          <div id="category-nav"></div>
+          <a href="#" class="nav-item nav-item-add" id="btn-add-category">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>添加分类</span>
+          </a>
+          <div class="sidebar-divider"></div>
+          <div id="goal-nav"></div>
+          <a href="#" class="nav-item nav-item-add" id="btn-add-goal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>添加目标</span>
+          </a>
         </nav>
       </aside>
 
@@ -80,6 +96,12 @@
               <option value="medium" selected>中优先级</option>
               <option value="high">高优先级</option>
             </select>
+            <select id="input-goal" class="input-sm">
+              <option value="">无目标</option>
+            </select>
+            <select id="input-category" class="input-sm">
+              <option value="">未分类</option>
+            </select>
             <input type="text" id="input-tags" class="input-sm" placeholder="标签 (逗号分隔)" />
             <button id="btn-add" class="btn-primary">添加</button>
             <button id="btn-cancel-add" class="btn-ghost">取消</button>
@@ -102,5 +124,93 @@
     </div>
 
     <div id="toast-area"></div>
+
+    <div id="modal-overlay" class="modal-overlay" style="display:none;">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modal-title">添加分类</h3>
+          <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="modal-name" class="modal-name-input" placeholder="分类名称" maxlength="20" autocomplete="off" />
+          <div class="modal-icons-label">选择图标</div>
+          <div class="modal-icon-grid" id="modal-icon-grid"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-delete-category" id="modal-delete" style="display:none;">删除分类</button>
+          <div class="modal-footer-right">
+            <button class="btn-ghost" id="modal-cancel">取消</button>
+            <button class="btn-primary" id="modal-save" disabled>保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="goal-modal-overlay" class="modal-overlay" style="display:none;">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="goal-modal-title">添加目标</h3>
+          <button class="modal-close" id="goal-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="goal-modal-name" class="modal-name-input" placeholder="目标名称" maxlength="40" autocomplete="off" />
+          <input type="text" id="goal-modal-desc" class="modal-name-input" placeholder="描述（可选）" />
+          <input type="date" id="goal-modal-date" class="modal-name-input" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn-delete-category" id="goal-modal-delete" style="display:none;">删除目标</button>
+          <div class="modal-footer-right">
+            <button class="btn-ghost" id="goal-modal-cancel">取消</button>
+            <button class="btn-primary" id="goal-modal-save" disabled>保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ai-overlay" class="modal-overlay" style="display:none;">
+      <div class="modal" style="width:520px;max-height:80vh;overflow-y:auto;">
+        <div class="modal-header">
+          <h3 class="modal-title">AI 助手</h3>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="ai-model-select" class="input-sm" style="margin-right:8px;"></select>
+            <button class="modal-close" id="ai-close">&times;</button>
+          </div>
+        </div>
+        <div class="modal-body" id="ai-body">
+          <div id="ai-analysis" class="ai-section"></div>
+          <div class="ai-divider"></div>
+          <div id="ai-plan">
+            <textarea id="ai-instruction" class="ai-input" placeholder="告诉 AI 你想怎么规划你的学习..." rows="2"></textarea>
+            <button class="btn-primary" id="ai-plan-btn" style="margin-top:8px;">生成计划</button>
+          </div>
+          <div id="ai-suggestions" class="ai-section" style="display:none;"></div>
+        </div>
+        <div class="modal-footer" style="gap:4px;flex-wrap:wrap;">
+          <button class="btn-ghost" id="ai-config-btn">⚙ 模型配置</button>
+          <span id="ai-status" style="font-size:12px;color:var(--color-text-hint);"></span>
+          <div class="modal-footer-right">
+            <button class="btn-ghost" id="ai-close-btn">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="model-overlay" class="modal-overlay" style="display:none;">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">模型配置</h3>
+          <button class="modal-close" id="model-close">&times;</button>
+        </div>
+        <div class="modal-body" id="model-body" style="max-height:50vh;overflow-y:auto;">
+          <div id="model-list" class="ai-section"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-ghost" id="model-add-custom">+ 自定义模型</button>
+          <div class="modal-footer-right">
+            <button class="btn-ghost" id="model-cancel">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

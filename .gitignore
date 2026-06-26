@@ -26,3 +26,5 @@ plan.md
 mingjing.db
 mingjing.db-wal
 mingjing.db-shm
+target/
+.hive/
