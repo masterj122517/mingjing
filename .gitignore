@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 plan.md
+mingjing.db
+mingjing.db-wal
+mingjing.db-shm
