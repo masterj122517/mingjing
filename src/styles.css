@@ -290,3 +290,14 @@ html, body { height: 100%; font-family: var(--font-family); font-size: var(--fon
 /* Loading spinner */
 .ai-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Plan Panel */
+.plan-task-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 8px; }
+.plan-task-num { width: 22px; height: 22px; border-radius: var(--radius-round); background: var(--color-sidebar); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); flex-shrink: 0; margin-top: 2px; }
+.plan-task-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.plan-task-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.plan-task-title { border: none; outline: none; font-size: 14px; font-family: var(--font-family); color: var(--color-text); background: transparent; width: 100%; padding: 2px 0; }
+.plan-task-title:focus { border-bottom: 1px solid var(--color-accent); }
+.plan-task-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.plan-task-meta select, .plan-task-meta input { padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 3px; font-size: 12px; font-family: var(--font-family); }
+.plan-task-reason { font-size: 11px; color: var(--color-text-hint); font-style: italic; }

@@ -188,6 +188,7 @@ function renderTaskList() {
   else { empty.style.display = 'none'; list.innerHTML = f.map(buildTaskHTML).join(''); }
   updateNavCounts();
   updateViewTitle();
+  document.getElementById('btn-plan').style.display = currentView === 'goal' ? '' : 'none';
 }
 
 async function toggleTodo(id) {
@@ -290,7 +291,7 @@ const aiSuggestions = [];
 
 function buildSuggestionCard(s, dbId, idx) {
   aiSuggestions[idx] = { id: dbId, data: s };
-  if (s.suggestion_type === 'create' && s.task) {
+  if (s.type === 'create' && s.task) {
     const t = s.task;
     return `
       <div class="ai-card" id="ai-card-${idx}">
@@ -306,7 +307,7 @@ function buildSuggestionCard(s, dbId, idx) {
           <button class="ai-ignore-btn" data-idx="${idx}">忽略</button>
         </div>
       </div>`;
-  } else if (s.suggestion_type === 'modify' && s.todo_id) {
+  } else if (s.type === 'modify' && s.todo_id) {
     const c = s.changes || {};
     const parts = [];
     if (c.title) parts.push(`标题→${escapeHtml(c.title)}`);
@@ -386,6 +387,101 @@ async function activateModel(id) {
 }
 
 function closeModelConfig() { document.getElementById('model-overlay').style.display = 'none'; }
+
+let planData = [];
+
+async function openPlanPanel() {
+  const goal = goals.find((g) => g.id === currentGoalId);
+  if (!goal) return;
+  document.getElementById('plan-title').textContent = `AI 学习计划 · ${goal.title}`;
+  document.getElementById('plan-instruction').value = '';
+  document.getElementById('plan-list').innerHTML = '';
+  document.getElementById('plan-status').textContent = '';
+  document.getElementById('plan-accept').style.display = 'none';
+  document.getElementById('plan-reject').style.display = 'none';
+  document.getElementById('plan-count').textContent = '';
+  document.getElementById('plan-overlay').style.display = 'flex';
+  planData = [];
+}
+
+async function generatePlan() {
+  const instruction = document.getElementById('plan-instruction').value.trim();
+  if (!instruction || currentGoalId === null) return;
+  const status = document.getElementById('plan-status');
+  status.innerHTML = '<span class="ai-spinner"></span> AI 正在生成学习计划...';
+  try {
+    const r = await invoke('generate_plan', { goalId: currentGoalId, instruction });
+    console.log('PLAN RAW:', JSON.stringify(r).slice(0, 300));
+    planData = (r.suggestions || []).filter((s) => s.type === 'create' && s.task);
+    console.log('PLAN FILTERED:', planData.length, 'tasks');
+    renderPlanCards();
+    document.getElementById('plan-accept').style.display = '';
+    document.getElementById('plan-reject').style.display = '';
+    document.getElementById('plan-count').textContent = `${planData.length} 个任务`;
+    status.textContent = '计划生成完成，你可以修改后采纳';
+  } catch (e) {
+    status.textContent = `生成失败: ${e}`;
+  }
+}
+
+function renderPlanCards() {
+  const list = document.getElementById('plan-list');
+  list.innerHTML = planData.map((s, i) => {
+    const t = s.task;
+    return `
+      <div class="plan-task-card" data-idx="${i}">
+        <div class="plan-task-num">${i + 1}</div>
+        <div class="plan-task-body">
+          <div class="plan-task-row">
+            <input class="plan-task-title" value="${escapeHtml(t.title)}" data-field="title" data-idx="${i}">
+          </div>
+          <div class="plan-task-meta">
+            <select data-field="priority" data-idx="${i}">
+              <option value="high" ${t.priority === 'high' ? 'selected' : ''}>高</option>
+              <option value="medium" ${t.priority === 'medium' ? 'selected' : ''}>中</option>
+              <option value="low" ${t.priority === 'low' ? 'selected' : ''}>低</option>
+            </select>
+            <input type="date" value="${t.due_date ? t.due_date.split('T')[0] : ''}" data-field="due_date" data-idx="${i}" style="width:130px;">
+            <input type="text" value="${escapeHtml(t.tags || '')}" data-field="tags" data-idx="${i}" placeholder="标签" style="width:100px;">
+          </div>
+          <div class="plan-task-reason">💡 ${escapeHtml(s.reason)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function acceptPlan() {
+  document.getElementById('plan-status').innerHTML = '<span class="ai-spinner"></span> 正在创建任务...';
+  let count = 0;
+  const promises = planData.map((s, i) => {
+    const t = s.task;
+    const titleEl = document.querySelector(`[data-field="title"][data-idx="${i}"]`);
+    const prioEl = document.querySelector(`[data-field="priority"][data-idx="${i}"]`);
+    const dueEl = document.querySelector(`[data-field="due_date"][data-idx="${i}"]`);
+    const tagsEl = document.querySelector(`[data-field="tags"][data-idx="${i}"]`);
+    if (titleEl) t.title = titleEl.value.trim();
+    if (prioEl) t.priority = prioEl.value;
+    if (dueEl) t.due_date = dueEl.value ? `${dueEl.value}T23:59:00` : null;
+    if (tagsEl) t.tags = tagsEl.value.trim();
+    return invoke('create_todo', {
+      input: { title: t.title, priority: t.priority, tags: t.tags || '', goal_id: t.goal_id, due_at: t.due_date },
+    }).then(() => { count++; }).catch((e) => console.error(e));
+  });
+  await Promise.all(promises);
+  await loadData();
+  renderTaskList();
+  document.getElementById('plan-overlay').style.display = 'none';
+  document.getElementById('plan-status').textContent = `已采纳 ${count} 个任务`;
+}
+
+function rejectPlan() {
+  planData = [];
+  document.getElementById('plan-list').innerHTML = '';
+  document.getElementById('plan-accept').style.display = 'none';
+  document.getElementById('plan-reject').style.display = 'none';
+  document.getElementById('plan-status').textContent = '已拒绝';
+  document.getElementById('plan-count').textContent = '';
+}
 
 async function deleteTodo(id) {
   const td = todos.find((t) => t.id === id);
@@ -1047,6 +1143,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   } catch (e) { console.error('AI panel init failed:', e); }
+
+  document.getElementById('btn-plan').addEventListener('click', openPlanPanel);
+  document.getElementById('plan-close').addEventListener('click', () => { document.getElementById('plan-overlay').style.display = 'none'; });
+  document.getElementById('plan-cancel').addEventListener('click', () => { document.getElementById('plan-overlay').style.display = 'none'; });
+  document.getElementById('plan-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) { document.getElementById('plan-overlay').style.display = 'none'; } });
+  document.getElementById('plan-generate-btn').addEventListener('click', generatePlan);
+  document.getElementById('plan-accept').addEventListener('click', acceptPlan);
+  document.getElementById('plan-reject').addEventListener('click', rejectPlan);
 
   startApp();
 });

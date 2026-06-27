@@ -190,6 +190,40 @@ pub async fn suggest_plan(
 }
 
 #[tauri::command]
+pub async fn generate_plan(
+    conn: State<'_, Mutex<Connection>>,
+    app: tauri::AppHandle,
+    goal_id: i64,
+    instruction: String,
+) -> Result<AnalysisOutput, String> {
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let (models, goal) = {
+        let c = conn.lock().unwrap();
+        let models = crate::db::list_model_configs(&c).map_err(|e| e.to_string())?;
+        let goal =
+            crate::db::list_goal_by_id(&c, goal_id).map_err(|e| e.to_string())?;
+        (models, goal)
+    };
+
+    let active = models.iter().find(|m| m.is_active).ok_or("请先配置并选择一个模型")?;
+    if crate::passkey::has_master_password(&app_dir) { return Err("请先验证主密码".into()); }
+
+    let mut result = crate::llm::call_llm_generate_plan(
+        &active.api_base, &active.api_key, &active.model_name, &goal, &instruction,
+    ).await;
+
+    // stamp goal_id on all create suggestions
+    if let Ok(ref mut r) = result {
+        for s in &mut r.suggestions {
+            if s.suggestion_type == "create" {
+                if let Some(ref mut t) = s.task { t.goal_id = Some(goal_id); }
+            }
+        }
+    }
+    result
+}
+
+#[tauri::command]
 pub fn save_suggestions(conn: State<Mutex<Connection>>, batch_id: String, suggestions: Vec<Suggestion>) -> Result<i64, String> {
     let c = conn.lock().unwrap();
     let mut count: i64 = 0;

@@ -46,6 +46,7 @@ pub fn run() {
             commands::verify_master_password,
             commands::analyze_todos,
             commands::suggest_plan,
+            commands::generate_plan,
             commands::save_suggestions,
             commands::list_pending_suggestions,
             commands::pending_suggestions_count,

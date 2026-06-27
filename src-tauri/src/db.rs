@@ -272,7 +272,7 @@ pub fn list_goals(conn: &Connection) -> Result<Vec<Goal>, DbError> {
     Ok(r)
 }
 
-fn list_goal_by_id(conn: &Connection, id: i64) -> Result<Goal, DbError> {
+pub fn list_goal_by_id(conn: &Connection, id: i64) -> Result<Goal, DbError> {
     let mut stmt = conn.prepare(
         "SELECT id,title,description,created_at,target_date,status FROM goals WHERE id=?1",
     )?;
