@@ -149,3 +149,48 @@ pub struct SuggestionChanges {
     pub title: Option<String>,
     pub due_date: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Statistics {
+    pub overview: StatOverview,
+    pub by_priority: Vec<PriorityStat>,
+    pub by_category: Vec<CategoryStat>,
+    pub daily_trend: Vec<DailyTrend>,
+    pub goal_progress: Vec<GoalProgress>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatOverview {
+    pub total: i64,
+    pub completed: i64,
+    pub pending: i64,
+    pub overdue: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriorityStat {
+    pub priority: String,
+    pub total: i64,
+    pub completed: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryStat {
+    pub name: String,
+    pub icon: String,
+    pub total: i64,
+    pub completed: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyTrend {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalProgress {
+    pub title: String,
+    pub total: i64,
+    pub completed: i64,
+}

@@ -5,6 +5,9 @@
     <link rel="stylesheet" href="styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>明镜 · Mingjing</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="module" src="/main.js" defer></script>
   </head>
 
@@ -55,6 +58,14 @@
             <span>已完成</span>
             <span class="nav-count" id="count-completed">0</span>
           </a>
+          <a href="#" class="nav-item" id="nav-stats" data-view="stats">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="nav-icon">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            统计
+          </a>
           <div class="sidebar-divider"></div>
           <div id="category-nav"></div>
           <a href="#" class="nav-item nav-item-add" id="btn-add-category">
@@ -88,7 +99,7 @@
           </div>
         </header>
 
-        <div class="quick-add">
+        <div class="quick-add" id="quick-add-container">
           <div class="quick-add-input-wrapper">
             <span class="quick-add-circle"></span>
             <input type="text" id="quick-add-input" placeholder="添加任务，按 Enter 创建…" autocomplete="off" />
@@ -123,6 +134,34 @@
           </svg>
           <p class="empty-text">暂无任务</p>
           <p class="empty-hint">在上方输入框中添加你的第一个学习任务</p>
+        </div>
+
+        <div id="stats-panel" style="display:none;">
+          <!-- 概览卡片 -->
+          <div class="stats-overview">
+            <div class="stat-card" id="stat-total"><span class="stat-num">0</span><span class="stat-label">总任务</span></div>
+            <div class="stat-card" id="stat-done"><span class="stat-num">0</span><span class="stat-label">已完成</span></div>
+            <div class="stat-card" id="stat-pending"><span class="stat-num">0</span><span class="stat-label">待完成</span></div>
+            <div class="stat-card" id="stat-overdue"><span class="stat-num">0</span><span class="stat-label">已逾期</span></div>
+          </div>
+          <!-- 图表区域 -->
+          <div class="stats-charts">
+            <div class="chart-container">
+              <canvas id="chart-priority"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="chart-trend"></canvas>
+            </div>
+          </div>
+          <!-- 目标进展 -->
+          <div class="stats-goals">
+            <h3>目标进展</h3>
+            <div id="goal-progress-list"></div>
+          </div>
+          <!-- PDF 导出按钮 -->
+          <div class="stats-footer">
+            <button class="btn-primary" id="btn-export-pdf">导出 PDF 报告</button>
+          </div>
         </div>
       </main>
     </div>

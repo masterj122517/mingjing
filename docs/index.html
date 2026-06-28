@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>明镜 · Mingjing</title>
+  <style>
+    @font-face {
+      font-family: 'LXGW';
+      src: url('https://raw.githubusercontent.com/masterj-cn/mingjing/main/src/assets/fonts/LXGWWenKaiLite-Regular.ttf') format('truetype');
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #0c0c14;
+      color: rgba(255,255,255,0.88);
+      font-family: 'LXGW', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .bg {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(96,165,250,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 30% 60%, rgba(96,165,250,0.04) 0%, transparent 40%);
+    }
+    .content { position: relative; z-index: 1; max-width: 680px; }
+    .logo {
+      width: 120px; height: 120px; margin: 0 auto 24px;
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      border-radius: 28px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 80px rgba(96,165,250,0.25);
+    }
+    .logo svg { width: 64px; height: 64px; }
+    h1 { font-size: 48px; font-weight: 700; margin-bottom: 8px; letter-spacing: 4px; }
+    .tagline { font-size: 20px; color: rgba(255,255,255,0.55); margin-bottom: 40px; }
+    .features {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px; margin-bottom: 48px;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px 16px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .card .icon { font-size: 28px; margin-bottom: 8px; }
+    .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card p { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+    .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 12px 28px; border-radius: 10px;
+      text-decoration: none; font-size: 15px; font-weight: 600; transition: all .2s;
+    }
+    .btn-primary {
+      background: #60a5fa; color: #0c0c14;
+    }
+    .btn-primary:hover { background: #93c5fd; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.88);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+    .footer {
+      margin-top: 64px; font-size: 13px; color: rgba(255,255,255,0.25);
+    }
+    .footer a { color: rgba(96,165,250,0.6); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="content">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+        <ellipse cx="12" cy="13" rx="10" ry="12" fill="white" fill-opacity="0.15"/>
+        <ellipse cx="12" cy="13" rx="10" ry="12"/>
+        <path d="M5 8 Q12 3 19 8" stroke-opacity="0.6"/>
+        <circle cx="8.5" cy="7" r="1.2" fill="white" stroke="none"/>
+      </svg>
+    </div>
+    <h1>明镜</h1>
+    <p class="tagline">以镜观己 — 智能学习计划管理器</p>
+
+    <div class="features">
+      <div class="card">
+        <div class="icon">🎯</div>
+        <h3>目标管理</h3>
+        <p>设定长期学习目标，跟踪进度</p>
+      </div>
+      <div class="card">
+        <div class="icon">🤖</div>
+        <h3>AI 规划</h3>
+        <p>LLM 自动拆解 5-15 个结构化任务</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>统计图表</h3>
+        <p>完成率、趋势、分布可视化</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔐</div>
+        <h3>数据安全</h3>
+        <p>AES-256-GCM 加密，本地优先</p>
+      </div>
+      <div class="card">
+        <div class="icon">📄</div>
+        <h3>PDF 报告</h3>
+        <p>一键导出学习统计报告</p>
+      </div>
+      <div class="card">
+        <div class="icon">🖥️</div>
+        <h3>跨平台</h3>
+        <p>macOS / Windows / Linux</p>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <a class="btn btn-primary" href="https://github.com/masterj-cn/mingjing/releases">下载应用</a>
+      <a class="btn btn-ghost" href="https://github.com/masterj-cn/mingjing">GitHub</a>
+    </div>
+
+    <div class="footer">
+      Built with <a href="https://tauri.app">Tauri 2</a> + Rust + SQLite ·
+      <a href="https://github.com/masterj-cn/mingjing">masterj-cn/mingjing</a>
+    </div>
+  </div>
+</body>
+</html>

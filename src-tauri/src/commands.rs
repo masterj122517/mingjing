@@ -268,6 +268,11 @@ pub fn accept_suggestion(conn: State<Mutex<Connection>>, id: i64, dbsuggestion: 
 }
 
 #[tauri::command]
+pub fn get_statistics(conn: State<Mutex<Connection>>) -> Result<Statistics, String> {
+    db::get_statistics(&conn.lock().unwrap()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn reject_suggestion(conn: State<Mutex<Connection>>, id: i64) -> Result<(), String> {
     crate::db::reject_suggestion_in_db(&conn.lock().unwrap(), id).map_err(|e| e.to_string())
 }

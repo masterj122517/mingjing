@@ -53,6 +53,7 @@ pub fn run() {
             commands::accept_suggestion,
             commands::reject_suggestion,
             commands::migrate,
+            commands::get_statistics,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

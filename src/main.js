@@ -28,6 +28,8 @@ let editingTags = [];
 let editingDueDate = null;
 let calendarYear = 2026;
 let calendarMonth = 6;
+let priorityChart = null;
+let trendChart = null;
 
 async function loadData() {
   [categories, goals, todos] = await Promise.all([
@@ -998,6 +1000,114 @@ function resetGoalDeleteButton() {
   if (btn) { btn.textContent = '删除目标'; btn.classList.remove('danger'); }
 }
 
+// ========== 统计面板 ==========
+
+async function loadStatistics() {
+  try {
+    const stats = await invoke('get_statistics');
+    document.querySelector('#stat-total .stat-num').textContent = stats.overview.total;
+    document.querySelector('#stat-done .stat-num').textContent = stats.overview.completed;
+    document.querySelector('#stat-pending .stat-num').textContent = stats.overview.pending;
+    document.querySelector('#stat-overdue .stat-num').textContent = stats.overdue;
+    renderPriorityChart(stats.by_priority);
+    renderDailyTrendChart(stats.daily_trend);
+    renderGoalProgress(stats.goal_progress);
+  } catch (e) {
+    console.error('loadStatistics:', e);
+  }
+}
+
+function renderPriorityChart(data) {
+  const ctx = document.getElementById('chart-priority').getContext('2d');
+  if (priorityChart) priorityChart.destroy();
+  priorityChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.priority === 'high' ? '高优先级' : d.priority === 'medium' ? '中优先级' : '低优先级'),
+      datasets: [
+        { label: '已完成', data: data.map(d => d.completed), backgroundColor: '#60a5fa', borderRadius: 6 },
+        { label: '待完成', data: data.map(d => d.total - d.completed), backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: 'rgba(255,255,255,0.55)' } } },
+      scales: {
+        x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.55)' }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: 'rgba(255,255,255,0.55)' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+}
+
+function renderDailyTrendChart(data) {
+  const ctx = document.getElementById('chart-trend').getContext('2d');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.date.slice(5)),
+      datasets: [
+        { label: '每日完成', data: data.map(d => d.count), borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#60a5fa' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: 'rgba(255,255,255,0.55)' } } },
+      scales: {
+        x: { ticks: { color: 'rgba(255,255,255,0.55)' }, grid: { display: false } },
+        y: { ticks: { color: 'rgba(255,255,255,0.55)' }, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderGoalProgress(goals) {
+  const list = document.getElementById('goal-progress-list');
+  if (!goals.length) { list.innerHTML = '<p style="color:var(--text-muted)">暂无目标</p>'; return; }
+  list.innerHTML = goals.map(g => {
+    const pct = g.total > 0 ? Math.round(g.completed / g.total * 100) : 0;
+    return `<div class="goal-progress-item">
+      <div class="goal-progress-header"><span>${escapeHtml(g.title)}</span><span>${g.completed}/${g.total}</span></div>
+      <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  doc.setTextColor(96, 165, 250);
+  doc.setFontSize(22);
+  doc.text('明镜 · 学习统计报告', 105, 20, { align: 'center' });
+
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(10);
+  doc.text(new Date().toLocaleDateString('zh-CN'), 105, 28, { align: 'center' });
+
+  doc.setDrawColor(96, 165, 250);
+  doc.setLineWidth(0.5);
+  doc.line(20, 33, 190, 33);
+
+  try {
+    const priorityCanvas = await html2canvas(document.getElementById('chart-priority').parentElement, { backgroundColor: '#0c0c14' });
+    doc.addImage(priorityCanvas.toDataURL('image/png'), 'PNG', 15, 40, 85, 60);
+
+    const trendCanvas = await html2canvas(document.getElementById('chart-trend').parentElement, { backgroundColor: '#0c0c14' });
+    doc.addImage(trendCanvas.toDataURL('image/png'), 'PNG', 110, 40, 85, 60);
+  } catch (e) { console.error('chart capture:', e); }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.text('目标进展', 20, 115);
+
+  const today = new Date().toISOString().slice(0, 10);
+  doc.save(`明镜-学习报告-${today}.pdf`);
+}
+
+// ========== DOM 事件绑定 ==========
+
 document.addEventListener('DOMContentLoaded', () => {
   const taskList = document.getElementById('task-list');
   taskList.addEventListener('click', (e) => {
@@ -1055,6 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.sidebar-nav').addEventListener('click', (lv) => {
     const navItem = lv.target.closest('.nav-item');
     if (!navItem) return;
+    if (navItem.id === 'nav-stats') return;
     if (lv.target.closest('.nav-cat-btn')) {
       lv.preventDefault(); lv.stopPropagation();
       const btn = lv.target.closest('.nav-cat-btn');
@@ -1078,6 +1189,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.querySelectorAll('.sidebar-nav .nav-item').forEach((n) => n.classList.remove('active'));
     navItem.classList.add('active');
+    document.getElementById('stats-panel').style.display = 'none';
+    document.getElementById('quick-add-container').style.display = '';
+    document.getElementById('task-list').style.display = '';
     syncQuickAddForm();
     renderTaskList();
   });
@@ -1151,6 +1265,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('plan-generate-btn').addEventListener('click', generatePlan);
   document.getElementById('plan-accept').addEventListener('click', acceptPlan);
   document.getElementById('plan-reject').addEventListener('click', rejectPlan);
+
+  // 统计面板
+  document.getElementById('nav-stats').addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    document.getElementById('task-list').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('quick-add-container').style.display = 'none';
+    document.getElementById('stats-panel').style.display = '';
+    await loadStatistics();
+  });
+
+  // PDF 导出
+  document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
 
   startApp();
 });

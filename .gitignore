@@ -28,3 +28,7 @@ mingjing.db-wal
 mingjing.db-shm
 target/
 .hive/
+
+
+releases/
+.debug.md

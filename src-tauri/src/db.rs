@@ -493,6 +493,110 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (y, m, d)
 }
 
+pub fn get_statistics(conn: &Connection) -> Result<Statistics, DbError> {
+    let now = now_iso();
+
+    // --- overview ---
+    let total: i64 = conn.query_row("SELECT COUNT(*) FROM todos", [], |r| r.get(0))?;
+    let completed: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM todos WHERE completed_at IS NOT NULL",
+        [],
+        |r| r.get(0),
+    )?;
+    let pending: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM todos WHERE completed_at IS NULL",
+        [],
+        |r| r.get(0),
+    )?;
+    let overdue: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM todos WHERE due_at IS NOT NULL AND due_at < ?1 AND completed_at IS NULL",
+        params![now],
+        |r| r.get(0),
+    )?;
+    let overview = StatOverview {
+        total,
+        completed,
+        pending,
+        overdue,
+    };
+
+    // --- by_priority ---
+    let mut stmt = conn.prepare(
+        "SELECT priority, COUNT(*), SUM(CASE WHEN completed_at IS NOT NULL THEN 1 ELSE 0 END) \
+         FROM todos GROUP BY priority ORDER BY priority",
+    )?;
+    let by_priority: Vec<PriorityStat> = stmt
+        .query_map([], |r| {
+            Ok(PriorityStat {
+                priority: r.get(0)?,
+                total: r.get(1)?,
+                completed: r.get(2)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // --- by_category ---
+    let mut stmt = conn.prepare(
+        "SELECT COALESCE(c.name, '(未分类)'), COALESCE(c.icon, 'target'), COUNT(*), \
+         SUM(CASE WHEN t.completed_at IS NOT NULL THEN 1 ELSE 0 END) \
+         FROM todos t LEFT JOIN categories c ON t.category_id = c.id \
+         GROUP BY t.category_id ORDER BY COUNT(*) DESC",
+    )?;
+    let by_category: Vec<CategoryStat> = stmt
+        .query_map([], |r| {
+            Ok(CategoryStat {
+                name: r.get(0)?,
+                icon: r.get(1)?,
+                total: r.get(2)?,
+                completed: r.get(3)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // --- daily_trend (last 30 days) ---
+    let mut stmt = conn.prepare(
+        "SELECT substr(completed_at, 1, 10) AS date, COUNT(*) \
+         FROM todos WHERE completed_at IS NOT NULL \
+         GROUP BY date ORDER BY date DESC LIMIT 30",
+    )?;
+    let daily_trend: Vec<DailyTrend> = stmt
+        .query_map([], |r| {
+            Ok(DailyTrend {
+                date: r.get(0)?,
+                count: r.get(1)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // --- goal_progress ---
+    let mut stmt = conn.prepare(
+        "SELECT g.title, COUNT(*), SUM(CASE WHEN t.completed_at IS NOT NULL THEN 1 ELSE 0 END) \
+         FROM todos t JOIN goals g ON t.goal_id = g.id \
+         GROUP BY t.goal_id ORDER BY g.id",
+    )?;
+    let goal_progress: Vec<GoalProgress> = stmt
+        .query_map([], |r| {
+            Ok(GoalProgress {
+                title: r.get(0)?,
+                total: r.get(1)?,
+                completed: r.get(2)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(Statistics {
+        overview,
+        by_priority,
+        by_category,
+        daily_trend,
+        goal_progress,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -681,5 +785,135 @@ mod tests {
         assert!(u.is_active);
         delete_model_config(&c, m.id).unwrap();
         assert!(list_model_configs(&c).unwrap().is_empty());
+    }
+    #[test]
+    fn test_get_statistics() {
+        let c = conn();
+        // Create categories
+        let cat = create_category(
+            &c,
+            &CreateCategory {
+                name: "学习".into(),
+                icon: "book".into(),
+            },
+        )
+        .unwrap();
+        let cat2 = create_category(
+            &c,
+            &CreateCategory {
+                name: "工作".into(),
+                icon: "briefcase".into(),
+            },
+        )
+        .unwrap();
+        // Create goals
+        let goal = create_goal(
+            &c,
+            &CreateGoal {
+                title: "六级".into(),
+                description: None,
+                target_date: None,
+            },
+        )
+        .unwrap();
+        // Create todos with different priorities
+        let t1 = create_todo(
+            &c,
+            &CreateTodo {
+                title: "高优先级任务".into(),
+                priority: Some("high".into()),
+                tags: None,
+                category_id: Some(cat.id),
+                goal_id: Some(goal.id),
+                due_at: None,
+            },
+        )
+        .unwrap();
+        let t2 = create_todo(
+            &c,
+            &CreateTodo {
+                title: "中优先级任务".into(),
+                priority: Some("medium".into()),
+                tags: None,
+                category_id: Some(cat2.id),
+                goal_id: None,
+                due_at: None,
+            },
+        )
+        .unwrap();
+        let _t3 = create_todo(
+            &c,
+            &CreateTodo {
+                title: "低优先级任务".into(),
+                priority: Some("low".into()),
+                tags: None,
+                category_id: None,
+                goal_id: None,
+                due_at: None,
+            },
+        )
+        .unwrap();
+        // Complete some
+        complete_todo(&c, t1.id).unwrap();
+        complete_todo(&c, t2.id).unwrap();
+        // Create an overdue todo
+        let _t4 = create_todo(
+            &c,
+            &CreateTodo {
+                title: "过期任务".into(),
+                priority: Some("high".into()),
+                tags: None,
+                category_id: None,
+                goal_id: None,
+                due_at: Some("2020-01-01T00:00:00".into()),
+            },
+        )
+        .unwrap();
+
+        let stats = get_statistics(&c).unwrap();
+
+        // overview
+        assert_eq!(stats.overview.total, 4);
+        assert_eq!(stats.overview.completed, 2);
+        assert_eq!(stats.overview.pending, 2);
+        assert_eq!(stats.overview.overdue, 1);
+
+        // by_priority
+        let high = stats
+            .by_priority
+            .iter()
+            .find(|p| p.priority == "high")
+            .unwrap();
+        assert_eq!(high.total, 2);
+        assert_eq!(high.completed, 1);
+        let medium = stats
+            .by_priority
+            .iter()
+            .find(|p| p.priority == "medium")
+            .unwrap();
+        assert_eq!(medium.total, 1);
+        assert_eq!(medium.completed, 1);
+        let low = stats
+            .by_priority
+            .iter()
+            .find(|p| p.priority == "low")
+            .unwrap();
+        assert_eq!(low.total, 1);
+        assert_eq!(low.completed, 0);
+
+        // by_category
+        assert!(!stats.by_category.is_empty());
+
+        // daily_trend (2 completed today)
+        assert!(!stats.daily_trend.is_empty());
+
+        // goal_progress
+        let gp = stats
+            .goal_progress
+            .iter()
+            .find(|g| g.title == "六级")
+            .unwrap();
+        assert_eq!(gp.total, 1);
+        assert_eq!(gp.completed, 1);
     }
 }
