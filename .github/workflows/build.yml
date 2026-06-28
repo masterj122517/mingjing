@@ -24,6 +24,9 @@ jobs:
             ext: msi
 
     runs-on: ${{ matrix.os }}
+    outputs:
+      bundle-path: ${{ steps.bundle-path.outputs.path }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,14 +39,48 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install macOS deps
+        if: runner.os == 'macOS'
+        run: cargo install cargo-bundle
 
       - name: Build
         run: cargo tauri build --target ${{ matrix.target }}
         working-directory: src-tauri
 
-      - name: Upload artifact
+      - name: Find bundle
+        id: find-bundle
+        run: |
+          BUNDLE=$(find src-tauri/target/${{ matrix.target }}/release/bundle -type f \( -name "*.${{ matrix.ext }}" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.dmg" \) 2>/dev/null | head -1)
+          echo "bundle=$BUNDLE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
           name: mingjing-${{ matrix.target }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/
+          path: ${{ steps.find-bundle.outputs.bundle }}
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          fail_on_unmatched_files: false
