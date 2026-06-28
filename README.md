@@ -49,7 +49,7 @@ Tauri 2 Commands (Rust)
 ### Run
 
 ```bash
-git clone https://github.com/masterj-cn/mingjing.git
+git clone https://github.com/masterj122517/mingjing.git
 cd mingjing
 cargo tauri dev
 ```
